@@ -1,0 +1,47 @@
+{
+  "name": "@gibberlink/gateway",
+  "version": "1.0.0",
+  "description": "Gibberlink Decoder Gateway - HTTP/WebSocket server",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@gibberlink/protocol-core": "workspace:*",
+    "@gibberlink/transports": "workspace:*",
+    "express": "^4.18.2",
+    "ws": "^8.14.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "rate-limiter-flexible": "^4.0.1",
+    "nanoid": "^5.0.4",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.0",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0",
+    "supertest": "^6.3.3",
+    "@types/supertest": "^2.0.16"
+  },
+  "keywords": [
+    "gibberlink",
+    "gateway",
+    "api",
+    "websocket",
+    "protocol"
+  ],
+  "author": "Juan Santos <baitjet@gmail.com>",
+  "license": "AGPL-3.0"
+}

@@ -1,0 +1,39 @@
+{
+  "name": "gibberlink-decoder-gateway",
+  "version": "1.0.0",
+  "description": "AI-to-AI Protocol Translator Gateway",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "test:integration": "node test-integration.js",
+    "test:websocket": "node websocket-client-example.js",
+    "test:real-websocket": "node real-websocket-test.js",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "clean": "pnpm --recursive clean",
+    "validate:openapi": "swagger-cli validate openapi.yaml",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "swagger-cli": "^4.0.4",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "dependencies": {
+    "ws": "^8.14.0"
+  }
+}

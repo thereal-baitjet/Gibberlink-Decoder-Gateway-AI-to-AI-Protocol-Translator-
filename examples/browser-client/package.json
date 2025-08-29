@@ -1,0 +1,29 @@
+{
+  "name": "@gibberlink/browser-client",
+  "version": "1.0.0",
+  "description": "Browser client example for Gibberlink Gateway",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@gibberlink/protocol-core": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.10.0",
+    "eslint": "^8.55.0"
+  },
+  "keywords": [
+    "gibberlink",
+    "browser",
+    "client",
+    "example"
+  ],
+  "author": "Juan Santos <baitjet@gmail.com>",
+  "license": "AGPL-3.0"
+}

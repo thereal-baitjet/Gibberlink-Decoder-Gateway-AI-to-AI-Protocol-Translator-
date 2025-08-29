@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gibberlink WebSocket Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-connected { background: #4CAF50; }
+        .status-disconnected { background: #f44336; }
+        .status-connecting { background: #ff9800; }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        
+        input, textarea, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input, textarea {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .messages {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        
+        .message-sent {
+            background: rgba(76, 175, 80, 0.2);
+            border-left-color: #4CAF50;
+        }
+        
+        .message-received {
+            background: rgba(33, 150, 243, 0.2);
+            border-left-color: #2196F3;
+        }
+        
+        .message-error {
+            background: rgba(244, 67, 54, 0.2);
+            border-left-color: #f44336;
+        }
+        
+        .message-info {
+            background: rgba(255, 193, 7, 0.2);
+            border-left-color: #ffc107;
+        }
+        
+        .timestamp {
+            color: #ccc;
+            font-size: 10px;
+        }
+        
+        .payload {
+            margin-top: 5px;
+            word-break: break-all;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Gibberlink WebSocket Client</h1>
+        
+        <div class="status">
+            <div>
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div>
+                Session ID: <span id="sessionId">None</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>🔐 Authentication</h3>
+                <input type="text" id="apiKey" placeholder="API Key" value="devkey">
+                <button id="establishSession">Establish Session</button>
+                <button id="connect" disabled>Connect WebSocket</button>
+                <button id="disconnect" disabled>Disconnect</button>
+            </div>
+            
+            <div class="control-group">
+                <h3>📤 Send Messages</h3>
+                <textarea id="messagePayload" placeholder='{"message": "Hello World", "data": {"numbers": [1,2,3]}}' rows="4">{"message": "Hello from browser!", "timestamp": "2024-01-01T00:00:00.000Z", "data": {"numbers": [1, 2, 3, 4, 5]}}</textarea>
+                <button id="sendMessage" disabled>Send Message</button>
+                <button id="sendHeartbeat" disabled>Send Heartbeat</button>
+            </div>
+        </div>
+        
+        <div class="messages" id="messages"></div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="messagesSent">0</div>
+                <div class="stat-label">Messages Sent</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="messagesReceived">0</div>
+                <div class="stat-label">Messages Received</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="connectionTime">0s</div>
+                <div class="stat-label">Connection Time</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="lastMessageTime">-</div>
+                <div class="stat-label">Last Message</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class GibberlinkWebSocketClient {
+            constructor() {
+                this.ws = null;
+                this.sessionId = null;
+                this.connected = false;
+                this.connectTime = null;
+                this.stats = {
+                    messagesSent: 0,
+                    messagesReceived: 0
+                };
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('establishSession').addEventListener('click', () => this.establishSession());
+                document.getElementById('connect').addEventListener('click', () => this.connect());
+                document.getElementById('disconnect').addEventListener('click', () => this.disconnect());
+                document.getElementById('sendMessage').addEventListener('click', () => this.sendMessage());
+                document.getElementById('sendHeartbeat').addEventListener('click', () => this.sendHeartbeat());
+            }
+
+            async establishSession() {
+                const apiKey = document.getElementById('apiKey').value;
+                if (!apiKey) {
+                    this.addMessage('error', 'API key is required');
+                    return;
+                }
+
+                this.addMessage('info', 'Establishing session...');
+                this.updateStatus('connecting');
+
+                try {
+                    const handshakeData = {
+                        clientFeatures: {
+                            compression: 'none',
+                            fec: false,
+                            crypto: false,
+                            maxMtu: 1500
+                        },
+                        peerAddress: {
+                            protocol: 'ws',
+                            host: 'localhost',
+                            port: 8080
+                        }
+                    };
+
+                    const response = await fetch('http://localhost:8080/v1/handshake', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': apiKey
+                        },
+                        body: JSON.stringify(handshakeData)
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.sessionId = data.sessionId;
+                        document.getElementById('sessionId').textContent = this.sessionId;
+                        this.addMessage('info', `Session established: ${this.sessionId}`);
+                        this.addMessage('info', `Negotiated features: ${JSON.stringify(data.negotiated)}`);
+                        
+                        document.getElementById('connect').disabled = false;
+                        this.updateStatus('disconnected');
+                    } else {
+                        const error = await response.json();
+                        this.addMessage('error', `Handshake failed: ${error.message}`);
+                        this.updateStatus('disconnected');
+                    }
+                } catch (error) {
+                    this.addMessage('error', `Connection error: ${error.message}`);
+                    this.updateStatus('disconnected');
+                }
+            }
+
+            connect() {
+                if (!this.sessionId) {
+                    this.addMessage('error', 'Session not established');
+                    return;
+                }
+
+                const wsUrl = `ws://localhost:8080?sessionId=${this.sessionId}`;
+                this.addMessage('info', `Connecting to WebSocket: ${wsUrl}`);
+                this.updateStatus('connecting');
+
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    this.connected = true;
+                    this.connectTime = Date.now();
+                    this.addMessage('info', 'WebSocket connected');
+                    this.updateStatus('connected');
+                    this.updateConnectionTime();
+                    
+                    document.getElementById('sendMessage').disabled = false;
+                    document.getElementById('sendHeartbeat').disabled = false;
+                    document.getElementById('disconnect').disabled = false;
+                    document.getElementById('connect').disabled = true;
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleMessage(message);
+                    } catch (error) {
+                        this.addMessage('error', `Failed to parse message: ${error.message}`);
+                    }
+                };
+
+                this.ws.onclose = (event) => {
+                    this.connected = false;
+                    this.addMessage('info', `WebSocket disconnected: ${event.code} - ${event.reason}`);
+                    this.updateStatus('disconnected');
+                    
+                    document.getElementById('sendMessage').disabled = true;
+                    document.getElementById('sendHeartbeat').disabled = true;
+                    document.getElementById('disconnect').disabled = true;
+                    document.getElementById('connect').disabled = false;
+                };
+
+                this.ws.onerror = (error) => {
+                    this.addMessage('error', `WebSocket error: ${error.message}`);
+                    this.updateStatus('disconnected');
+                };
+            }
+
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                    this.connected = false;
+                    this.addMessage('info', 'Disconnected');
+                    this.updateStatus('disconnected');
+                }
+            }
+
+            sendMessage() {
+                if (!this.connected) {
+                    this.addMessage('error', 'WebSocket not connected');
+                    return;
+                }
+
+                const payloadText = document.getElementById('messagePayload').value;
+                let payload;
+                
+                try {
+                    payload = JSON.parse(payloadText);
+                } catch (error) {
+                    this.addMessage('error', 'Invalid JSON payload');
+                    return;
+                }
+
+                const message = {
+                    type: 'send',
+                    msgId: `browser_${Date.now()}`,
+                    payload: payload,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.ws.send(JSON.stringify(message));
+                this.addMessage('sent', `Sent: ${message.msgId}`, payload);
+                this.stats.messagesSent++;
+                this.updateStats();
+            }
+
+            sendHeartbeat() {
+                if (!this.connected) {
+                    this.addMessage('error', 'WebSocket not connected');
+                    return;
+                }
+
+                const message = {
+                    type: 'heartbeat',
+                    msgId: `heartbeat_${Date.now()}`,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.ws.send(JSON.stringify(message));
+                this.addMessage('sent', `Heartbeat sent: ${message.msgId}`);
+                this.stats.messagesSent++;
+                this.updateStats();
+            }
+
+            handleMessage(message) {
+                this.stats.messagesReceived++;
+                this.updateStats();
+                this.updateLastMessageTime();
+
+                switch (message.type) {
+                    case 'recv':
+                        this.addMessage('received', `Echo received: ${message.msgId}`, message.payload);
+                        break;
+                    case 'error':
+                        this.addMessage('error', `Server error: ${message.message}`);
+                        break;
+                    case 'heartbeat':
+                        this.addMessage('received', `Heartbeat received: ${message.msgId}`);
+                        break;
+                    default:
+                        this.addMessage('received', `Unknown message type: ${message.type}`, message);
+                }
+            }
+
+            addMessage(type, text, payload = null) {
+                const messagesDiv = document.getElementById('messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message message-${type}`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                messageDiv.innerHTML = `
+                    <div class="timestamp">[${timestamp}] ${text}</div>
+                    ${payload ? `<div class="payload">${JSON.stringify(payload, null, 2)}</div>` : ''}
+                `;
+                
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            updateStatus(status) {
+                const indicator = document.getElementById('statusIndicator');
+                const text = document.getElementById('statusText');
+                
+                indicator.className = 'status-indicator';
+                indicator.classList.add(`status-${status}`);
+                
+                const statusTexts = {
+                    'connected': 'Connected',
+                    'disconnected': 'Disconnected',
+                    'connecting': 'Connecting...'
+                };
+                
+                text.textContent = statusTexts[status] || 'Unknown';
+            }
+
+            updateStats() {
+                document.getElementById('messagesSent').textContent = this.stats.messagesSent;
+                document.getElementById('messagesReceived').textContent = this.stats.messagesReceived;
+            }
+
+            updateConnectionTime() {
+                if (this.connectTime) {
+                    const interval = setInterval(() => {
+                        if (this.connected) {
+                            const elapsed = Math.floor((Date.now() - this.connectTime) / 1000);
+                            document.getElementById('connectionTime').textContent = `${elapsed}s`;
+                        } else {
+                            clearInterval(interval);
+                        }
+                    }, 1000);
+                }
+            }
+
+            updateLastMessageTime() {
+                const now = new Date().toLocaleTimeString();
+                document.getElementById('lastMessageTime').textContent = now;
+            }
+        }
+
+        // Initialize the client when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.gibberlinkClient = new GibberlinkWebSocketClient();
+        });
+    </script>
+</body>
+</html>

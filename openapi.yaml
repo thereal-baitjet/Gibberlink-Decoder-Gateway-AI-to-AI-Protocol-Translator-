@@ -1,0 +1,518 @@
+openapi: 3.1.0
+info:
+  title: Gibberlink Decoder Gateway API
+  description: AI-to-AI Protocol Translator Gateway
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: baitjet@gmail.com
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.gibberlink.dev
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /v1/health:
+    get:
+      summary: Health check
+      description: Returns the health status and available transports/codecs
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/handshake:
+    post:
+      summary: Establish a session
+      description: Negotiate capabilities and establish a session for AI-to-AI communication
+      tags:
+        - Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandshakeRequest'
+      responses:
+        '200':
+          description: Session established
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandshakeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/encode:
+    post:
+      summary: Encode and send message
+      description: Encode JSON payload into optimized protocol format and send via transport
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncodeRequest'
+      responses:
+        '200':
+          description: Message encoded and sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncodeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Policy violation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/decode:
+    post:
+      summary: Decode message
+      description: Decode optimized protocol bytes back to JSON
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecodeRequest'
+      responses:
+        '200':
+          description: Message decoded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecodeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/transcript/{msgId}:
+    get:
+      summary: Get message transcript
+      description: Retrieve human-readable transcript of an AI-to-AI message exchange
+      tags:
+        - Transcript
+      parameters:
+        - name: msgId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+      responses:
+        '200':
+          description: Transcript retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Transcript not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/messages:
+    get:
+      summary: WebSocket endpoint for streaming messages
+      description: WebSocket connection for real-time message streaming
+      tags:
+        - Streaming
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          description: Session ID
+          schema:
+            type: string
+      responses:
+        '101':
+          description: Switching to WebSocket protocol
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        timestamp:
+          type: string
+          format: date-time
+        transports:
+          type: array
+          items:
+            type: string
+            enum: [ws, udp, audio]
+        codecs:
+          type: array
+          items:
+            type: string
+            enum: [msgpack, cbor, json]
+        version:
+          type: string
+      required:
+        - status
+        - timestamp
+        - transports
+        - codecs
+        - version
+
+    HandshakeRequest:
+      type: object
+      properties:
+        transport:
+          type: string
+          enum: [ws, udp, audio]
+          description: Transport protocol to use
+        features:
+          $ref: '#/components/schemas/Features'
+        target:
+          type: string
+          format: uri
+          description: Target peer address
+      required:
+        - transport
+
+    Features:
+      type: object
+      properties:
+        compression:
+          type: string
+          enum: [zstd, none]
+          default: none
+        fec:
+          type: boolean
+          default: false
+        crypto:
+          type: boolean
+          default: false
+        maxMtu:
+          type: integer
+          minimum: 64
+          maximum: 65535
+          default: 1500
+
+    HandshakeResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        negotiated:
+          $ref: '#/components/schemas/Features'
+        peerAddress:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - sessionId
+        - negotiated
+        - peerAddress
+        - expiresAt
+
+    EncodeRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        target:
+          type: string
+          format: uri
+        payload:
+          type: object
+          additionalProperties: true
+        requireTranscript:
+          type: boolean
+          default: true
+      required:
+        - sessionId
+        - target
+        - payload
+
+    EncodeResponse:
+      type: object
+      properties:
+        msgId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        bytesBase64:
+          type: string
+          description: Base64 encoded protocol bytes
+        frames:
+          type: integer
+          minimum: 1
+          description: Number of frames sent
+        size:
+          type: integer
+          minimum: 0
+          description: Total bytes sent
+        transcriptId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: ID for retrieving transcript
+      required:
+        - msgId
+        - bytesBase64
+        - frames
+        - size
+
+    DecodeRequest:
+      type: object
+      properties:
+        bytesBase64:
+          type: string
+          description: Base64 encoded protocol bytes to decode
+      required:
+        - bytesBase64
+
+    DecodeResponse:
+      type: object
+      properties:
+        msgId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        payload:
+          type: object
+          additionalProperties: true
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+      required:
+        - msgId
+        - payload
+        - metadata
+
+    MessageMetadata:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        transport:
+          type: string
+          enum: [ws, udp, audio]
+        codec:
+          type: string
+          enum: [msgpack, cbor, json]
+        compression:
+          type: string
+          enum: [zstd, none]
+        fec:
+          type: boolean
+        size:
+          type: integer
+          minimum: 0
+        frames:
+          type: integer
+          minimum: 1
+        crc32:
+          type: string
+          pattern: '^[0-9a-fA-F]{8}$'
+      required:
+        - timestamp
+        - transport
+        - codec
+        - size
+
+    TranscriptResponse:
+      type: object
+      properties:
+        msgId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+          description: Human-readable payload (PII redacted)
+        metadata:
+          $ref: '#/components/schemas/MessageMetadata'
+        audit:
+          $ref: '#/components/schemas/AuditInfo'
+        rawFrames:
+          type: array
+          items:
+            type: string
+            description: Base64 encoded raw frames
+      required:
+        - msgId
+        - timestamp
+        - payload
+        - metadata
+        - audit
+
+    AuditInfo:
+      type: object
+      properties:
+        actor:
+          type: string
+          description: API key identifier
+        route:
+          type: string
+        policyDecision:
+          type: string
+          enum: [allow, deny]
+        piiDetected:
+          type: boolean
+        redactedFields:
+          type: array
+          items:
+            type: string
+        hash:
+          type: string
+          pattern: '^[0-9a-fA-F]{64}$'
+          description: SHA-256 hash of original payload
+      required:
+        - actor
+        - route
+        - policyDecision
+        - piiDetected
+        - hash
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+      required:
+        - error
+        - message
+        - timestamp
+
+    WebSocketMessage:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [send, recv, heartbeat, error]
+        msgId:
+          type: string
+          pattern: '^[a-zA-Z0-9_-]+$'
+        payload:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - type
+        - timestamp
+
+tags:
+  - name: Health
+    description: Health and status endpoints
+  - name: Session
+    description: Session management and handshake
+  - name: Messages
+    description: Message encoding and decoding
+  - name: Transcript
+    description: Message transcript retrieval
+  - name: Streaming
+    description: Real-time message streaming

@@ -1,0 +1,44 @@
+{
+  "name": "@gibberlink/protocol-core",
+  "version": "1.0.0",
+  "description": "Core protocol encoding/decoding, framing, and error correction",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^2.8.0",
+    "cbor": "^9.0.2",
+    "crc-32": "^1.2.2",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "gibberlink",
+    "protocol",
+    "codec",
+    "framer",
+    "fec",
+    "handshake"
+  ],
+  "author": "Juan Santos <baitjet@gmail.com>",
+  "license": "AGPL-3.0"
+}
