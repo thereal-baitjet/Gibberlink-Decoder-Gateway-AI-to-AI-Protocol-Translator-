@@ -8,11 +8,11 @@ export {
   CBORCodec, 
   JSONCodec, 
   CompressedCodec,
-  codecs 
+  codecs
 } from './codec';
 export { 
   FramerV1, 
-  ChunkedFrameReassembler 
+  ChunkedFrameReassembler
 } from './framer';
 export { 
   NoOpFEC, 

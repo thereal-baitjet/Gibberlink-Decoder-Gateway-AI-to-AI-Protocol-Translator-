@@ -1,0 +1,42 @@
+{
+  "name": "@gibberlink/audio-decoder",
+  "version": "1.0.0",
+  "description": "Audio capture, processing, and decoding for AI-to-AI acoustic protocols",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gibberlink/protocol-core": "workspace:*",
+    "mic": "^2.1.2",
+    "audio-decode": "^1.4.0",
+    "wav-decoder": "^1.3.0",
+    "fft-js": "^0.0.12",
+    "node-record-lpcm16": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@gibberlink/protocol-core": "workspace:*"
+  }
+}

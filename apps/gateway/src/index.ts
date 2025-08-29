@@ -9,6 +9,11 @@ import { PolicyEngineImpl, defaultPolicyConfig } from './services/policy';
 import { AuditLogger, defaultAuditConfig } from './services/audit';
 import { SessionManager, InMemorySessionStore } from './services/session';
 import { createRoutes, RouteDependencies } from './routes';
+import { Englishizer, OpenAIConfig } from '@gibberlink/englishizer';
+
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 
 export interface GatewayConfig {
   port: number;
@@ -29,6 +34,7 @@ export class Gateway {
   private policyEngine!: PolicyEngineImpl;
   private auditLogger!: AuditLogger;
   private sessionManager!: SessionManager;
+  private englishizer: any;
 
   constructor(config: GatewayConfig) {
     this.config = config;
@@ -79,6 +85,16 @@ export class Gateway {
     // Session manager
     const sessionStore = new InMemorySessionStore();
     this.sessionManager = new SessionManager(sessionStore);
+
+    // Englishizer for plain English translation with OpenAI enhancement
+    const openaiConfig: OpenAIConfig | undefined = process.env.OPENAI_API_KEY ? {
+      apiKey: process.env.OPENAI_API_KEY,
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      maxTokens: parseInt(process.env.OPENAI_MAX_TOKENS || '500'),
+      temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.3')
+    } : undefined;
+    
+    this.englishizer = new Englishizer({}, undefined, openaiConfig);
   }
 
   private setupRoutes(): void {
@@ -151,14 +167,208 @@ export class Gateway {
             // Handle send message
             console.log('Received WebSocket message:', message);
             
-            // Echo back for demo
-            ws.send(JSON.stringify({
+            const msgId = `ws_${Date.now()}`;
+            
+            // Generate English translation
+            let englishized = null;
+            try {
+              const event = {
+                kind: 'unknown',
+                payload: message.payload,
+                meta: {
+                  msgId,
+                  transport: 'WebSocket',
+                  codec: 'JSON',
+                  ts: Date.now(),
+                  sessionId
+                }
+              };
+              
+              englishized = await this.englishizer.toPlainEnglish(event);
+            } catch (error) {
+              console.warn('Failed to generate English translation:', error);
+            }
+            
+            // Echo back for demo with English translation
+            const response = {
               type: 'recv',
-              msgId: `ws_${Date.now()}`,
+              msgId,
               payload: message.payload,
               timestamp: new Date().toISOString(),
+            };
+            
+            // Add English translation if available
+            if (englishized) {
+              (response as any).english = {
+                text: englishized.text,
+                confidence: englishized.confidence,
+                glossary: englishized.glossary,
+                redactions: englishized.redactions
+              };
+            }
+            
+            ws.send(JSON.stringify(response));
+            
+            // Also send plain English version
+            if (englishized) {
+              ws.send(JSON.stringify({
+                type: 'recv.plain',
+                msgId,
+                text: englishized.text,
+                confidence: englishized.confidence,
+                timestamp: new Date().toISOString(),
+              }));
+            }
+          } else if (message.type === 'audio.start') {
+            // Handle audio start request
+            console.log('Audio start request:', message);
+            
+            // This would integrate with the AudioToPlainPipeline
+            // For now, send acknowledgment
+            ws.send(JSON.stringify({
+              type: 'audio.started',
+              deviceId: message.deviceId,
+              timestamp: new Date().toISOString(),
             }));
-          }
+            
+          } else if (message.type === 'audio.frame') {
+            // Handle simulated audio frame (for backward compatibility)
+            console.log('Received simulated audio frame:', message);
+            
+            const frame = message;
+            const msgId = frame.msgId || `audio_${Date.now()}`;
+            
+            // Generate English translation for audio frame
+            let englishized = null;
+            try {
+              const event = {
+                kind: 'unknown',
+                payload: frame.payload,
+                meta: {
+                  msgId,
+                  transport: 'Audio',
+                  codec: 'JSON',
+                  ts: frame.timestamp || Date.now(),
+                  sessionId
+                }
+              };
+              
+              englishized = await this.englishizer.toPlainEnglish(event);
+              
+              // Send the translation back to the client
+              if (englishized) {
+                console.log('✅ Sending translation:', englishized.text);
+                ws.send(JSON.stringify({
+                  type: 'recv.plain',
+                  msgId,
+                  text: englishized.text,
+                  confidence: englishized.confidence,
+                  snrDb: 18.5, // Mock SNR
+                  lockPct: 85.2, // Mock lock percentage
+                  timestamp: new Date().toISOString(),
+                }));
+              }
+            } catch (error) {
+              console.warn('Failed to generate English translation for audio frame:', error);
+            }
+          } else if (message.type === 'audio.raw') {
+            // Handle real audio data for FSK demodulation
+            console.log('Received real audio data for FSK demodulation:', message.frame);
+            
+            const frame = message.frame;
+            const msgId = frame.msgId || `audio_${Date.now()}`;
+            
+            try {
+              // Convert audio data back to Float32Array
+              const audioData = new Float32Array(frame.audioData);
+              
+              // Process with real FSK demodulation
+              const { AudioDecoderImpl } = await import('@gibberlink/audio-decoder');
+              
+              const decoder = new AudioDecoderImpl({
+                sampleRate: frame.sampleRate || 48000,
+                symbolRate: 1200,
+                tones: [1200, 1800, 2400, 3000],
+                windowSize: 1024,
+                overlap: 0.5,
+                noiseThreshold: 0.01,
+                silenceThreshold: 0.001,
+                maxFrameSize: 1024
+              });
+              
+              // Attempt to decode the audio data
+              const decodedFrames = await decoder.decodeChunk(audioData);
+              
+              if (decodedFrames.length > 0) {
+                console.log(`✅ Successfully decoded ${decodedFrames.length} frames from real audio`);
+                
+                for (const decodedFrame of decodedFrames) {
+                  try {
+                    const decodedText = new TextDecoder().decode(decodedFrame);
+                    const decodedJson = JSON.parse(decodedText);
+                    
+                    // Generate English translation for decoded frame
+                    const event = {
+                      kind: 'unknown',
+                      payload: decodedJson,
+                      meta: {
+                        msgId: `${msgId}_decoded`,
+                        transport: 'Audio',
+                        codec: 'FSK',
+                        ts: frame.timestamp || Date.now(),
+                        sessionId
+                      }
+                    };
+                    
+                    const englishized = await this.englishizer.toPlainEnglish(event);
+                    
+                    // Send decoded frame and translation
+                    ws.send(JSON.stringify({
+                      type: 'recv.plain',
+                      msgId: `${msgId}_decoded`,
+                      text: englishized.text,
+                      confidence: englishized.confidence,
+                      snrDb: frame.rms * 20, // Convert RMS to approximate SNR
+                      lockPct: 85, // Mock lock percentage
+                      timestamp: new Date().toISOString(),
+                    }));
+                    
+                  } catch (error) {
+                    console.warn('Failed to parse decoded frame:', error);
+                  }
+                }
+              } else {
+                console.log('❌ No frames decoded from real audio data');
+                
+                // Send acknowledgment that audio was received but no FSK signal detected
+                ws.send(JSON.stringify({
+                  type: 'audio.noise',
+                  msgId,
+                  message: 'Audio received but no FSK signal detected',
+                  rms: frame.rms,
+                  timestamp: new Date().toISOString(),
+                }));
+              }
+              
+                          } catch (error) {
+                console.error('Failed to process real audio data:', error);
+                
+                ws.send(JSON.stringify({
+                  type: 'audio.error',
+                  msgId,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  timestamp: new Date().toISOString(),
+                }));
+              }
+            } else if (message.type === 'audio.stop') {
+              // Handle audio stop request
+              console.log('Audio stop request');
+              
+              ws.send(JSON.stringify({
+                type: 'audio.stopped',
+                timestamp: new Date().toISOString(),
+              }));
+            }
         } catch (error) {
           console.error('WebSocket message error:', error);
           ws.send(JSON.stringify({
@@ -239,3 +449,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   });
 }
+
+// Export the AudioToPlainPipeline for external use
+export { AudioToPlainPipeline } from './pipeline/audioToPlain';

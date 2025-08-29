@@ -1,0 +1,42 @@
+{
+  "name": "@gibberlink/englishizer",
+  "version": "1.0.0",
+  "description": "Plain-English translator for Gibberlink AI-to-AI protocol messages",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@gibberlink/protocol-core": "workspace:*",
+    "openai": "^4.104.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "gibberlink",
+    "ai-to-ai",
+    "protocol",
+    "translator",
+    "plain-english",
+    "human-readable"
+  ],
+  "author": "Gibberlink Team",
+  "license": "MIT"
+}

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gibberlink Audio Decoder Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .form-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .spectrum-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .spectrum-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+        
+        #spectrum-canvas {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #000;
+        }
+        
+        .stats-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .stats-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+        
+        .stats-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        
+        .stat-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .decoded-container {
+            grid-column: 1 / -1;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        .decoded-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+        
+        .decoded-frames-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .decoded-frame {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .frame-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #666;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .frame-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            border: 1px solid #eee;
+        }
+        
+        .frame-data pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            margin-left: 15px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Gibberlink Audio Decoder</h1>
+            <p>Real-time AI-to-AI acoustic protocol decoding with spectrum analysis</p>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <button id="start-audio" class="btn btn-primary">🎵 Start Listening</button>
+                <button id="stop-audio" class="btn btn-danger" disabled>⏹️ Stop Listening</button>
+                <select id="device-select" class="form-select">
+                    <option value="">🎙️ Select Microphone...</option>
+                </select>
+                <div id="status" class="status info">Ready to start</div>
+            </div>
+            
+            <div class="grid">
+                <div class="spectrum-container">
+                    <h3>📊 Real-time Spectrum Analysis</h3>
+                    <canvas id="spectrum-canvas" width="800" height="400"></canvas>
+                </div>
+                
+                <div class="stats-container">
+                    <h3>📈 Live Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Chunks Processed:</span>
+                            <span id="chunks-processed" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Frames Decoded:</span>
+                            <span id="frames-decoded" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Average SNR:</span>
+                            <span id="avg-snr" class="stat-value">0 dB</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Error Rate:</span>
+                            <span id="error-rate" class="stat-value">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Signal Strength:</span>
+                            <span id="signal-strength" class="stat-value">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Processing Time:</span>
+                            <span id="processing-time" class="stat-value">0ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="decoded-container">
+                <h3>📡 Decoded AI Messages</h3>
+                <div id="decoded-frames" class="decoded-frames-list">
+                    <div class="decoded-frame">
+                        <div class="frame-header">
+                            <span class="timestamp">Waiting for audio input...</span>
+                        </div>
+                        <div class="frame-data">
+                            <pre>No messages decoded yet. Start listening to capture AI-to-AI acoustic signals.</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock audio decoder for demo purposes
+        class MockAudioDecoder {
+            constructor() {
+                this.stats = {
+                    totalChunks: 0,
+                    totalFrames: 0,
+                    averageSnr: 0,
+                    errorRate: 0,
+                    signalStrength: 0,
+                    processingTime: 0
+                };
+                this.isRunning = false;
+                this.animationId = null;
+                this.canvas = document.getElementById('spectrum-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.setupCanvas();
+            }
+
+            setupCanvas() {
+                this.canvas.width = 800;
+                this.canvas.height = 400;
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            async start() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.updateStatus('Listening for audio signals...', 'success');
+                this.animate();
+                
+                // Simulate audio processing
+                this.simulationInterval = setInterval(() => {
+                    this.stats.totalChunks++;
+                    this.stats.averageSnr = 15 + Math.random() * 10;
+                    this.stats.signalStrength = 30 + Math.random() * 40;
+                    this.stats.processingTime = 50 + Math.random() * 100;
+                    
+                    // Occasionally decode a frame
+                    if (Math.random() < 0.1) {
+                        this.stats.totalFrames++;
+                        this.displayDecodedFrame();
+                    }
+                    
+                    this.updateStats();
+                }, 100);
+            }
+
+            async stop() {
+                this.isRunning = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                if (this.simulationInterval) {
+                    clearInterval(this.simulationInterval);
+                }
+                this.updateStatus('Stopped listening', 'info');
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+                
+                this.drawSpectrum();
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            drawSpectrum() {
+                // Clear canvas
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 1;
+                
+                // Vertical lines (frequency)
+                for (let i = 0; i <= 10; i++) {
+                    const x = (i / 10) * this.canvas.width;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                
+                // Horizontal lines (magnitude)
+                for (let i = 0; i <= 5; i++) {
+                    const y = (i / 5) * this.canvas.height;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+                
+                // Draw simulated spectrum
+                const binCount = 100;
+                const binWidth = this.canvas.width / binCount;
+                
+                for (let i = 0; i < binCount; i++) {
+                    const frequency = (i / binCount) * 5000; // 0-5kHz
+                    let magnitude = 0;
+                    
+                    // Simulate FSK tones at 1500, 1900, 2300, 2700 Hz
+                    const tones = [1500, 1900, 2300, 2700];
+                    for (const tone of tones) {
+                        const distance = Math.abs(frequency - tone);
+                        if (distance < 200) {
+                            magnitude += Math.exp(-distance / 100) * (0.3 + Math.random() * 0.4);
+                        }
+                    }
+                    
+                    // Add some noise
+                    magnitude += Math.random() * 0.1;
+                    
+                    const height = magnitude * this.canvas.height;
+                    const x = i * binWidth;
+                    const y = this.canvas.height - height;
+                    
+                    // Color based on frequency
+                    if (frequency >= 1400 && frequency <= 3000) {
+                        this.ctx.fillStyle = '#0f0'; // Green for FSK band
+                    } else {
+                        this.ctx.fillStyle = '#666'; // Gray for other frequencies
+                    }
+                    
+                    this.ctx.fillRect(x, y, binWidth - 1, height);
+                }
+            }
+
+            displayDecodedFrame() {
+                const container = document.getElementById('decoded-frames');
+                const frameElement = document.createElement('div');
+                frameElement.className = 'decoded-frame';
+                
+                const testMessages = [
+                    { message: 'Hello from AI system Alpha', priority: 'high', timestamp: new Date().toISOString() },
+                    { message: 'Data transfer complete', status: 'success', bytes: 1024 },
+                    { message: 'System status update', cpu: '45%', memory: '2.1GB', temperature: '65°C' },
+                    { message: 'Neural network inference result', confidence: 0.94, class: 'object_detected' },
+                    { message: 'Audio protocol handshake', session: 'active', codec: '4-FSK', baud: 250 }
+                ];
+                
+                const message = testMessages[Math.floor(Math.random() * testMessages.length)];
+                
+                frameElement.innerHTML = `
+                    <div class="frame-header">
+                        <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                        <span class="snr">SNR: ${this.stats.averageSnr.toFixed(1)} dB</span>
+                        <span class="size">${Math.floor(Math.random() * 200 + 50)} bytes</span>
+                    </div>
+                    <div class="frame-data">
+                        <pre>${JSON.stringify(message, null, 2)}</pre>
+                    </div>
+                `;
+
+                container.insertBefore(frameElement, container.firstChild);
+                
+                // Keep only last 10 frames
+                while (container.children.length > 10) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+
+            updateStats() {
+                document.getElementById('chunks-processed').textContent = this.stats.totalChunks.toString();
+                document.getElementById('frames-decoded').textContent = this.stats.totalFrames.toString();
+                document.getElementById('avg-snr').textContent = `${this.stats.averageSnr.toFixed(1)} dB`;
+                document.getElementById('error-rate').textContent = `${(this.stats.errorRate * 100).toFixed(1)}%`;
+                document.getElementById('signal-strength').textContent = `${this.stats.signalStrength.toFixed(0)}%`;
+                document.getElementById('processing-time').textContent = `${this.stats.processingTime.toFixed(0)}ms`;
+            }
+
+            updateStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = `status ${type}`;
+            }
+
+            async getDevices() {
+                return [
+                    { id: 'default', name: 'Default Microphone' },
+                    { id: 'external', name: 'External USB Microphone' },
+                    { id: 'bluetooth', name: 'Bluetooth Headset' }
+                ];
+            }
+        }
+
+        // Initialize demo
+        const demo = new MockAudioDecoder();
+        let isRunning = false;
+
+        // Set up event listeners
+        document.getElementById('start-audio').addEventListener('click', async () => {
+            try {
+                await demo.start();
+                isRunning = true;
+                
+                document.getElementById('start-audio').disabled = true;
+                document.getElementById('stop-audio').disabled = false;
+                
+            } catch (error) {
+                console.error('Failed to start audio demo:', error);
+                demo.updateStatus('Failed to start - check microphone permissions', 'error');
+            }
+        });
+
+        document.getElementById('stop-audio').addEventListener('click', async () => {
+            try {
+                await demo.stop();
+                isRunning = false;
+                
+                document.getElementById('start-audio').disabled = false;
+                document.getElementById('stop-audio').disabled = true;
+                
+            } catch (error) {
+                console.error('Failed to stop audio demo:', error);
+            }
+        });
+
+        // Load devices
+        demo.getDevices().then(devices => {
+            const select = document.getElementById('device-select');
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.textContent = device.name;
+                select.appendChild(option);
+            });
+        });
+
+        // Handle device selection
+        document.getElementById('device-select').addEventListener('change', async (event) => {
+            const deviceId = event.target.value;
+            if (deviceId && isRunning) {
+                demo.updateStatus(`Switched to ${event.target.options[event.target.selectedIndex].text}`, 'info');
+            }
+        });
+    </script>
+</body>
+</html>

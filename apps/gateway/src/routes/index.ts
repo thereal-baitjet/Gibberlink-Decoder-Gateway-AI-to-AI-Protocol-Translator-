@@ -3,7 +3,9 @@ import { healthRoutes } from './health';
 import { handshakeRoutes, HandshakeRouteDependencies } from './handshake';
 import { encodeRoutes, EncodeRouteDependencies } from './encode';
 import { decodeRoutes, DecodeRouteDependencies } from './decode';
-import { transcriptRoutes, TranscriptRouteDependencies } from './transcript';
+import { createAudioRoutes, AudioRouteDependencies } from './audio';
+import { createTranscriptRoutes, TranscriptRouteDependencies } from './transcript';
+import { createAudioPlainRoutes, AudioPlainRouteDependencies } from './audioPlain';
 
 export interface RouteDependencies {
   sessionManager: any;
@@ -22,9 +24,23 @@ export function createRoutes(deps: RouteDependencies): Router {
     policyEngine: deps.policyEngine, 
     auditLogger: deps.auditLogger 
   } as DecodeRouteDependencies));
-  router.use('/v1/transcript', transcriptRoutes({ 
-    auditLogger: deps.auditLogger 
+
+  router.use('/v1', createAudioRoutes({ 
+    auditLogger: deps.auditLogger,
+    policyEngine: deps.policyEngine 
+  } as AudioRouteDependencies));
+
+  router.use('/v1', createTranscriptRoutes({ 
+    auditLogger: deps.auditLogger,
+    policyEngine: deps.policyEngine,
+    sessionManager: deps.sessionManager
   } as TranscriptRouteDependencies));
+
+  router.use('/v1', createAudioPlainRoutes({ 
+    auditLogger: deps.auditLogger,
+    policyEngine: deps.policyEngine,
+    sessionManager: deps.sessionManager
+  } as AudioPlainRouteDependencies));
 
   // 404 handler
   router.use('*', (req, res) => {

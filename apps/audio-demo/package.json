@@ -1,0 +1,35 @@
+{
+  "name": "@gibberlink/audio-demo",
+  "version": "1.0.0",
+  "description": "CLI tool for testing audio capture and decoding",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "audio-demo": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gibberlink/audio-decoder": "workspace:*",
+    "@gibberlink/protocol-core": "workspace:*",
+    "commander": "^11.0.0",
+    "chalk": "^5.0.0",
+    "ora": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  }
+}
